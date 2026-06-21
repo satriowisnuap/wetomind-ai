@@ -32,17 +32,27 @@ const PASARAN_NEPTU = [
 /**
  * Menghitung weton berdasarkan tanggal lahir.
  *
- * Referensi:
- * 1 Januari 1970 = Kamis Pahing
+ * Referensi: 1 Januari 1970 = Kamis Wage.
+ * (Anchor pasaran dikoreksi dengan offset +2 setelah diverifikasi
+ * terhadap 17 Agustus 1945 = Jumat Legi dan 29 November 2004 = Senin Kliwon.)
  */
 export function getWeton(dateString: string): WetonResult {
-    const date = new Date(dateString);
+    const parts = dateString.split('-');
+    if (parts.length !== 3) {
+        throw new Error('Format tanggal tidak valid');
+    }
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
 
-    if (isNaN(date.getTime())) {
+    if (isNaN(year) || isNaN(month) || isNaN(day)) {
         throw new Error('Tanggal tidak valid');
     }
 
-    const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const utcDate = new Date(Date.UTC(year, month - 1, day));
+    if (isNaN(utcDate.getTime())) {
+        throw new Error('Tanggal tidak valid');
+    }
 
     const dayIndex = utcDate.getUTCDay();
     const hari = HARI_NEPTU[dayIndex];
@@ -51,7 +61,8 @@ export function getWeton(dateString: string): WetonResult {
 
     const diffDays = Math.floor((utcDate.getTime() - epoch.getTime()) / (1000 * 60 * 60 * 24));
 
-    const pasaranIndex = ((diffDays % 5) + 5) % 5;
+    // Offset +2 mengoreksi anchor pasaran (1 Jan 1970 = Wage, bukan Pahing)
+    const pasaranIndex = (((diffDays + 2) % 5) + 5) % 5;
     const pasaran = PASARAN_NEPTU[pasaranIndex];
 
     return {

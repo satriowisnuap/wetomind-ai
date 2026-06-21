@@ -1,6 +1,7 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Calendar, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import clsx from 'clsx';
@@ -21,12 +22,13 @@ const MONTHS_ID = [
 const DAYS_SHORT = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
 const HARI_JAWA: Record<number, string> = { 0: 'Ngahad', 1: 'Senen', 2: 'Selasa', 3: 'Rebo', 4: 'Kemis', 5: 'Jemuwah', 6: 'Setu' };
-const PASARAN_CYCLE = ['Legi', 'Pahing', 'Pon', 'Wage', 'Kliwon'];
-const EPOCH_DATE = new Date(2000, 0, 1);
 
 function getPasaran(date: Date): string {
-    const diff = Math.floor((date.getTime() - EPOCH_DATE.getTime()) / 86400000);
-    return PASARAN_CYCLE[((diff % 5) + 5) % 5];
+    const utcDate = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    const epoch = Date.UTC(1970, 0, 1);
+    const diffDays = Math.floor((utcDate - epoch) / 86400000);
+    const PASARAN_CYCLE = ['Pahing', 'Pon', 'Wage', 'Kliwon', 'Legi'];
+    return PASARAN_CYCLE[((diffDays % 5) + 5) % 5];
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -62,8 +64,11 @@ function CalendarBody({
     const selectedYear  = value ? parseInt(value.split('-')[0]) : null;
     const daysInMonth   = getDaysInMonth(viewYear, viewMonth);
     const firstDay      = getFirstDayOfMonth(viewYear, viewMonth);
-    const calendarDate  = value ? new Date(parseInt(value.split('-')[0]), parseInt(value.split('-')[1]) - 1, parseInt(value.split('-')[2])) : null;
-    const calendarHariJawa = calendarDate ? HARI_JAWA[calendarDate.getDay()] : null;
+    const calendarDate  = value ? (() => {
+        const [y, m, d] = value.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d));
+    })() : null;
+    const calendarHariJawa = calendarDate ? HARI_JAWA[calendarDate.getUTCDay()] : null;
     const calendarPasaran  = calendarDate ? getPasaran(calendarDate) : null;
     const yearRange: number[] = [];
     for (let y = today.getFullYear(); y >= 1930; y--) yearRange.push(y);
@@ -119,13 +124,13 @@ function CalendarBody({
                         {Array.from({ length: daysInMonth }).map((_, i) => {
                             const day = i + 1;
                             const isSelected = day === selectedDay && viewMonth === selectedMonth && viewYear === selectedYear;
-                            const cellDate = new Date(viewYear, viewMonth, day);
+                            const cellDate = new Date(Date.UTC(viewYear, viewMonth, day));
                             const pasaran  = getPasaran(cellDate);
                             const isKliwon = pasaran === 'Kliwon';
-                            const isFriday = cellDate.getDay() === 5;
+                            const isFriday = cellDate.getUTCDay() === 5;
                             const isToday  = day === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
                             return (
-                                <button key={day} type="button" onClick={() => onSelectDate(day)} title={`${HARI_JAWA[cellDate.getDay()]} ${pasaran}`}
+                                <button key={day} type="button" onClick={() => onSelectDate(day)} title={`${HARI_JAWA[cellDate.getUTCDay()]} ${pasaran}`}
                                     className={clsx(
                                         'relative flex flex-col items-center justify-center rounded-xl transition-all active:scale-90 h-10 w-full text-sm font-medium',
                                         isSelected ? 'bg-accent-gold text-[#0a0400] font-black shadow-md shadow-accent-gold/30'
@@ -170,6 +175,7 @@ export function JaweDatePicker({ value, onChange, required, placeholder = 'Pilih
     const today = new Date();
     const [isOpen, setIsOpen]           = useState(false);
     const [isMobile, setIsMobile]       = useState(false);
+    const [mounted, setMounted]         = useState(false);
     const [dropdownPos, setDropdownPos] = useState<DropdownPos>({ top: 0, left: 0, width: 300 });
     const [showYearPicker, setShowYearPicker] = useState(false);
 
@@ -177,6 +183,11 @@ export function JaweDatePicker({ value, onChange, required, placeholder = 'Pilih
     const [viewMonth, setViewMonth] = useState(() => value ? parseInt(value.split('-')[1]) - 1 : today.getMonth());
 
     const triggerRef = useRef<HTMLButtonElement>(null);
+
+    // Mark as mounted after hydration so portals / window access are safe
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         const check = () => setIsMobile(isMobileDevice());
@@ -192,6 +203,7 @@ export function JaweDatePicker({ value, onChange, required, placeholder = 'Pilih
         }
     }, [value]);
 
+    // Close on outside click (desktop only)
     useEffect(() => {
         if (isMobile || !isOpen) return;
         function handler(e: MouseEvent | TouchEvent) {
@@ -210,6 +222,7 @@ export function JaweDatePicker({ value, onChange, required, placeholder = 'Pilih
         };
     }, [isMobile, isOpen]);
 
+    // Lock body scroll on mobile when open
     useEffect(() => {
         if (isMobile && isOpen) { document.body.style.overflow = 'hidden'; }
         else { document.body.style.overflow = ''; }
@@ -238,6 +251,18 @@ export function JaweDatePicker({ value, onChange, required, placeholder = 'Pilih
         setIsOpen(o => !o);
     }, [isOpen, isMobile, computeDropdownPos]);
 
+    // Recompute position on scroll/resize so the calendar stays anchored
+    useEffect(() => {
+        if (isMobile || !isOpen) return;
+        const onScrollOrResize = () => computeDropdownPos();
+        window.addEventListener('scroll', onScrollOrResize, { passive: true, capture: true });
+        window.addEventListener('resize', onScrollOrResize, { passive: true });
+        return () => {
+            window.removeEventListener('scroll', onScrollOrResize, { capture: true });
+            window.removeEventListener('resize', onScrollOrResize);
+        };
+    }, [isMobile, isOpen, computeDropdownPos]);
+
     const prevMonth = useCallback(() => {
         setViewMonth(m => { if (m === 0) { setViewYear(y => y - 1); return 11; } return m - 1; });
     }, []);
@@ -261,6 +286,32 @@ export function JaweDatePicker({ value, onChange, required, placeholder = 'Pilih
         onSelectDate: selectDate, onSelectYear: selectYear,
     };
 
+    const desktopDropdown = (
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    id="jawa-dp-dropdown"
+                    key="desktop-dropdown"
+                    initial={{ opacity: 0, scale: 0.97, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.97, y: -4 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    style={{
+                        position: 'fixed',
+                        top:    dropdownPos.top    !== undefined ? dropdownPos.top    : undefined,
+                        bottom: dropdownPos.bottom !== undefined ? dropdownPos.bottom : undefined,
+                        left:   dropdownPos.left,
+                        width:  dropdownPos.width,
+                        zIndex: 9999,
+                    }}
+                    className="rounded-2xl overflow-hidden border border-accent-gold/25 shadow-[0_8px_40px_rgba(0,0,0,0.35),0_0_0_1px_rgba(212,175,55,0.08)] bg-bg-primary backdrop-blur-xl"
+                >
+                    <CalendarBody {...calendarProps} />
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+
     return (
         <div className="relative w-full">
             <button
@@ -279,30 +330,10 @@ export function JaweDatePicker({ value, onChange, required, placeholder = 'Pilih
                 <Calendar className="w-4 h-4 text-accent-gold/60 shrink-0" />
             </button>
 
-            {/* DESKTOP: fixed-positioned dropdown — never clipped by overflow parents */}
-            <AnimatePresence>
-                {!isMobile && isOpen && (
-                    <motion.div
-                        id="jawa-dp-dropdown"
-                        key="desktop-dropdown"
-                        initial={{ opacity: 0, scale: 0.97 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.97 }}
-                        transition={{ duration: 0.15, ease: 'easeOut' }}
-                        style={{
-                            position: 'fixed',
-                            top:    dropdownPos.top    !== undefined ? dropdownPos.top    : undefined,
-                            bottom: dropdownPos.bottom !== undefined ? dropdownPos.bottom : undefined,
-                            left:   dropdownPos.left,
-                            width:  dropdownPos.width,
-                            zIndex: 9999,
-                        }}
-                        className="rounded-2xl overflow-hidden border border-accent-gold/25 shadow-[0_8px_40px_rgba(0,0,0,0.35),0_0_0_1px_rgba(212,175,55,0.08)] bg-bg-primary backdrop-blur-xl"
-                    >
-                        <CalendarBody {...calendarProps} />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* DESKTOP: Portal onto document.body so it escapes any ancestor
+                overflow / transform containing block. AnimatePresence lives
+                inside the portal so Framer Motion can track the child. */}
+            {mounted && !isMobile && createPortal(desktopDropdown, document.body)}
 
             {/* MOBILE: full-screen bottom-sheet modal */}
             <AnimatePresence>
