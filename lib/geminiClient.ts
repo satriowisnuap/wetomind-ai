@@ -3,7 +3,7 @@ export async function callGeminiStream(
   contextPayload: any,
   apiKey: string
 ): Promise<Response> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   const requestBody = {
     systemInstruction: {

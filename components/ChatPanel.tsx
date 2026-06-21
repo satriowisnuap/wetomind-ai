@@ -6,7 +6,7 @@ import { ChatBubble } from './ChatBubble';
 import { TypingIndicator } from './TypingIndicator';
 import { WetonBadge } from './WetonBadge';
 import { JaweDatePicker } from './ui/JaweDatePicker';
-import { RefreshCw, Send, Trash2, ArrowLeft, X, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Send, Trash2, ArrowLeft, X, AlertTriangle, Edit, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // ─────────────────────────────────────────────────────────────────
@@ -65,6 +65,20 @@ const suggestedPrompts: Record<FeatureType, string[]> = {
   SINERGI_REKAN:  ['Bagaimana potensi bisnis kami berdua?', 'Apa pembagian peran yang ideal?'],
 };
 
+const MONTHS_SHORT = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+  'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'
+];
+
+function formatDisplayDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [year, month, day] = parts.map(Number);
+  if (!year || !month || !day) return dateStr;
+  return `${day} ${MONTHS_SHORT[month - 1]} ${year}`;
+}
+
 export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate = '' }: ChatPanelProps) {
   // ── Per-feature chat history ────────────────────────────────────
   // Initialised empty; hydrated from sessionStorage on first mount (see useEffect below)
@@ -82,6 +96,7 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
   const [partnerBirthdate,setPartnerBirthdateRaw] = useState('');
 
   // ── Other transient state ───────────────────────────────────────
+  const [isDataExpanded,   setIsDataExpanded]   = useState(false);
   const [isLoading,        setIsLoading]        = useState(false);
   const [isStreaming,      setIsStreaming]       = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -183,6 +198,7 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
   // ── Derived flags ────────────────────────────────────────────────
   const needsSecondPerson = selectedFeature === 'UJI_JODOH' || selectedFeature === 'SINERGI_REKAN';
   const isFormComplete    = userName && userBirthdate && (!needsSecondPerson || partnerName);
+  const showFullForm      = messages.length === 0 || isDataExpanded;
 
   // ── Actions ──────────────────────────────────────────────────────
   // Clear only the active feature's chat
@@ -207,6 +223,7 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
     setPartnerNameRaw('');
     setPartnerBirthdateRaw('');
     setCurrentWeton(null);
+    setIsDataExpanded(false);
   };
 
   // ── Send message ─────────────────────────────────────────────────
@@ -332,14 +349,76 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
             onSelect={setSelectedFeature}
           />
 
-          <AnimatePresence>
-            {messages.length === 0 && (
+          <AnimatePresence mode="wait">
+            {!showFullForm ? (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
+                key="summary-form"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-white/30 dark:bg-white/5 border border-[#c9a227]/15 rounded-xl p-3.5 mt-2 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#c9a227]/5 dark:hover:bg-white/8 transition-all duration-200"
+                onClick={() => setIsDataExpanded(true)}
+              >
+                <div className="flex flex-col gap-1">
+                  <div className="text-[10px] uppercase tracking-wider text-[#a89070] font-bold">
+                    Data Konsultasi
+                  </div>
+                  <div className="text-sm font-medium text-text-primary flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="font-semibold text-accent-gold">{userName || '—'}</span>
+                    {userBirthdate && (
+                      <span className="text-text-secondary text-xs">
+                        ({formatDisplayDate(userBirthdate)})
+                      </span>
+                    )}
+                    {needsSecondPerson && (
+                      <>
+                        <span className="text-accent-gold/40 text-xs">|</span>
+                        <span className="font-semibold text-accent-amber">{partnerName || '—'}</span>
+                        {partnerBirthdate && (
+                          <span className="text-text-secondary text-xs">
+                            ({formatDisplayDate(partnerBirthdate)})
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-accent-gold hover:text-accent-amber hover:bg-accent-gold/8 transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsDataExpanded(true);
+                  }}
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>Ubah</span>
+                </button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="full-form"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
                 className="bg-white/40 dark:bg-white/5 border border-[#c9a227]/20 rounded-xl p-4 mt-2 space-y-4"
               >
+                <div className="flex justify-between items-center pb-2 border-b border-[#c9a227]/10">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#a89070]">
+                    Data Diri Konsultasi
+                  </span>
+                  {messages.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsDataExpanded(false)}
+                      className="flex items-center gap-1 text-xs font-bold text-[#a89070] hover:text-accent-gold transition-colors"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                      Sembunyikan
+                    </button>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-[#a89070] mb-1">Nama Anda</label>

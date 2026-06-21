@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
             if (done) break;
 
             const text = decoder.decode(value, { stream: true });
-            const lines = text.split('\\n').filter((line) => line.trim() !== '');
+            const lines = text.split('\n').filter((line) => line.trim() !== '');
 
             for (const line of lines) {
               if (line.startsWith('data: ')) {
@@ -114,8 +114,12 @@ export async function POST(req: NextRequest) {
         'Cache-Control': 'no-cache, no-transform',
       },
     });
-  } catch (error) {
-    console.error('Chat API Error:', error);
-    return new Response('Maaf, terjadi gangguan pada sistem analisis. Mohon coba beberapa saat lagi.', { status: 500, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  } catch (error: any) {
+    const errMsg = error?.message || String(error);
+    console.error('Chat API Error:', errMsg);
+    return new Response(
+      `Maaf, terjadi gangguan pada sistem analisis. Detail: ${errMsg}`,
+      { status: 500, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+    );
   }
 }
