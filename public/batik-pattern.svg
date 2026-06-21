@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60">
+  <defs>
+    <pattern id="kawung" width="60" height="60" patternUnits="userSpaceOnUse">
+      <!-- Pola kawung: 4 elips menyilang membentuk bunga -->
+      <ellipse cx="15" cy="15" rx="12" ry="7" fill="none" stroke="rgba(201,162,39,0.12)" stroke-width="0.8"/>
+      <ellipse cx="45" cy="15" rx="12" ry="7" fill="none" stroke="rgba(201,162,39,0.12)" stroke-width="0.8"/>
+      <ellipse cx="15" cy="45" rx="12" ry="7" fill="none" stroke="rgba(201,162,39,0.12)" stroke-width="0.8"/>
+      <ellipse cx="45" cy="45" rx="12" ry="7" fill="none" stroke="rgba(201,162,39,0.12)" stroke-width="0.8"/>
+      <!-- Titik tengah -->
+      <circle cx="30" cy="30" r="2" fill="rgba(201,162,39,0.08)"/>
+    </pattern>
+  </defs>
+  <rect width="60" height="60" fill="url(#kawung)"/>
+</svg>

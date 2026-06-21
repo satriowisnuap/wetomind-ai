@@ -1,0 +1,6 @@
+{
+  "name": "WetoMind AI",
+  "description": "Platform chatbot berbasis AI yang menggabungkan Kalender Jawa, Weton, Primbon Jawa, dan Google Gemini API untuk memberikan analisis personal berbasis weton secara modern, cepat, dan mudah dipahami.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

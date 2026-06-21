@@ -1,0 +1,195 @@
+@import 'tailwindcss';
+
+@theme {
+    --color-bg-primary: var(--bg-primary);
+    --color-bg-secondary: var(--bg-secondary);
+    --color-accent-gold: var(--accent-gold);
+    --color-accent-amber: var(--accent-amber);
+    --color-text-primary: var(--text-primary);
+    --color-text-secondary: var(--text-secondary);
+    --color-border-subtle: var(--border-subtle);
+
+    --font-sans: var(--font-sans), system-ui, sans-serif;
+    --font-display: var(--font-display), system-ui, sans-serif;
+}
+
+:root {
+    --bg-primary: #fcf8f2;
+    --bg-secondary: #f6efe5;
+    --text-primary: #2d1904;
+    --text-secondary: #8c7355;
+    --accent-gold: #c5972d;
+    --accent-amber: #b85c00;
+    --border-subtle: rgba(197, 151, 45, 0.15);
+}
+
+.dark {
+    --bg-primary: #0a0400;
+    --bg-secondary: #120701;
+    --text-primary: #fbeed7;
+    --text-secondary: #9e8465;
+    --accent-gold: #d4af37;
+    --accent-amber: #e67300;
+    --border-subtle: rgba(212, 175, 55, 0.2);
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    /* Modern fade-in batik pattern */
+    background-image:
+        radial-gradient(circle at 50% 30%, transparent 10%, var(--bg-primary) 80%), url('/batik-pattern.svg');
+    background-attachment: fixed;
+    background-size:
+        auto,
+        120px 120px;
+}
+
+@layer utilities {
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .glass-card {
+        background: rgba(251, 238, 215, 0.03);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(212, 175, 55, 0.12);
+    }
+
+    .dark .glass-card {
+        background: rgba(18, 7, 1, 0.4);
+        border: 1px solid rgba(212, 175, 55, 0.08);
+    }
+
+    .glass-card-interactive {
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .glass-card-interactive:hover {
+        transform: translateY(-4px) scale(1.01);
+        background: rgba(212, 175, 55, 0.06);
+        border-color: rgba(212, 175, 55, 0.3);
+        box-shadow:
+            0 12px 30px -10px rgba(0, 0, 0, 0.3),
+            0 0 20px rgba(212, 175, 55, 0.1);
+    }
+}
+
+@keyframes bgBreath {
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+.bg-animated {
+    background-size: 400% 400%;
+    animation: bgBreath 25s ease infinite;
+}
+
+@keyframes goldGlow {
+    0%,
+    100% {
+        box-shadow:
+            0 0 15px rgba(212, 175, 55, 0.2),
+            inset 0 0 15px rgba(212, 175, 55, 0.05);
+        border-color: rgba(212, 175, 55, 0.2);
+    }
+    50% {
+        box-shadow:
+            0 0 25px rgba(212, 175, 55, 0.4),
+            inset 0 0 20px rgba(212, 175, 55, 0.1);
+        border-color: rgba(212, 175, 55, 0.5);
+    }
+}
+
+.glow-gold {
+    animation: goldGlow 4s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin-slow {
+    animation: spin-slow 40s linear infinite;
+}
+
+@keyframes spin-reverse-slow {
+    from {
+        transform: rotate(360deg);
+    }
+    to {
+        transform: rotate(0deg);
+    }
+}
+
+.animate-spin-reverse-slow {
+    animation: spin-reverse-slow 60s linear infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% center;
+    }
+    100% {
+        background-position: 200% center;
+    }
+}
+
+.text-shimmer {
+    background: linear-gradient(90deg, #d4af37, #fff6d6, #e67300, #d4af37);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 5s linear infinite;
+}
+
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-10px) rotate(0.5deg);
+    }
+}
+
+.float {
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .mb-safe {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
