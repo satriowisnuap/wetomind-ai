@@ -5,7 +5,8 @@ import { FeatureSelector } from './FeatureSelector';
 import { ChatBubble } from './ChatBubble';
 import { TypingIndicator } from './TypingIndicator';
 import { WetonBadge } from './WetonBadge';
-import { RefreshCw, Send, Trash2, ArrowLeft } from 'lucide-react';
+import { JaweDatePicker } from './ui/JaweDatePicker';
+import { RefreshCw, Send, Trash2, ArrowLeft, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ChatPanelProps {
@@ -171,8 +172,13 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
       <header className="flex items-center justify-between px-4 py-3 border-b border-accent-gold/10 bg-bg-primary/80 backdrop-blur-md sticky top-0 z-10 w-full shrink-0">
         <div className="flex items-center gap-3">
           {onClose && (
-            <button onClick={onClose} className="lg:hidden p-2 -ml-2 text-[#a89070] hover:text-accent-gold">
-              <ArrowLeft className="w-5 h-5" />
+            <button
+              onClick={onClose}
+              className="p-2 -ml-2 text-[#a89070] hover:text-accent-gold transition-colors rounded-lg hover:bg-accent-gold/8"
+              title="Tutup Chat"
+            >
+              <ArrowLeft className="w-5 h-5 lg:hidden" />
+              <X className="w-5 h-5 hidden lg:block" />
             </button>
           )}
           <h2 className="font-display text-lg font-bold text-text-primary">Konsultasi</h2>
@@ -223,11 +229,10 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[#a89070] mb-1">Tanggal Lahir</label>
-                    <input
-                      type="date"
-                      className="w-full bg-transparent border-b border-[#c9a227]/40 focus:border-[#c9a227] outline-none py-1.5 text-[#3d1f00] dark:text-[#f5e6c8]"
+                    <JaweDatePicker
                       value={userBirthdate}
-                      onChange={(e) => setUserBirthdate(e.target.value)}
+                      onChange={setUserBirthdate}
+                      placeholder="Pilih tanggal lahir"
                     />
                   </div>
                 </div>
@@ -250,11 +255,10 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-[#a89070] mb-1">Tanggal Lahir (Opsional)</label>
-                      <input
-                        type="date"
-                        className="w-full bg-transparent border-b border-[#c9a227]/40 focus:border-[#c9a227] outline-none py-1.5 text-[#3d1f00] dark:text-[#f5e6c8]"
+                      <JaweDatePicker
                         value={partnerBirthdate}
-                        onChange={(e) => setPartnerBirthdate(e.target.value)}
+                        onChange={setPartnerBirthdate}
+                        placeholder="Pilih tanggal lahir"
                       />
                     </div>
                   </motion.div>

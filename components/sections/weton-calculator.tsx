@@ -4,6 +4,7 @@ import { Calendar, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { WetonResultCard } from './weton-result-card';
 import type { WetonResult } from '@/lib/javaCalendar';
+import { JaweDatePicker } from '@/components/ui/JaweDatePicker';
 
 interface WetonCalculatorProps {
     calcName: string;
@@ -64,12 +65,11 @@ export function WetonCalculator({
                                 <label className="block text-xs font-bold text-text-secondary uppercase mb-1.5 tracking-wider">
                                     Tanggal Lahir
                                 </label>
-                                <input
-                                    type="date"
-                                    required
+                                <JaweDatePicker
                                     value={calcBirthdate}
-                                    onChange={(e) => setCalcBirthdate(e.target.value)}
-                                    className="w-full px-4 py-2.5 rounded-xl bg-bg-secondary/40 border border-accent-gold/10 focus:border-accent-gold/60 outline-none text-text-primary text-sm transition-all"
+                                    onChange={setCalcBirthdate}
+                                    required
+                                    placeholder="Pilih tanggal lahir"
                                 />
                             </div>
                         </div>
