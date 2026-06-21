@@ -85,7 +85,7 @@ export default function Home() {
                         animate={{ width: isMobile ? '100%' : '50%', opacity: 1 }}
                         exit={{ width: '0%', opacity: 0 }}
                         transition={{ type: 'spring', bounce: 0, duration: 0.8 }}
-                        className="h-[100dvh] absolute lg:relative right-0 flex-shrink-0 bg-bg-secondary shadow-[-20px_0_40px_rgba(0,0,0,0.35)] z-20"
+                        className="h-[100dvh] absolute top-0 right-0 lg:relative lg:top-auto flex-shrink-0 bg-bg-secondary shadow-[-20px_0_40px_rgba(0,0,0,0.35)] z-20 overflow-hidden"
                     >
                         <div className="w-full h-full min-w-[320px]">
                             <ChatPanel

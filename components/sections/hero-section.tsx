@@ -3,6 +3,7 @@
 import type { WetonResult } from '@/lib/javaCalendar';
 import clsx from 'clsx';
 import Image from 'next/image';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import { WetonCalculator } from './weton-calculator';
 
 interface HeroSectionProps {
@@ -31,33 +32,56 @@ export function HeroSection(props: HeroSectionProps) {
             {/* Hero Text & Calculator */}
             <div
                 className={clsx(
-                    "flex flex-col items-center lg:items-start text-center lg:text-left fade-in-up",
-                    isChatOpen ? "col-span-1" : "lg:col-span-7"
+                    "flex flex-col fade-in-up",
+                    isChatOpen
+                        ? "col-span-1 items-center text-center"
+                        : "items-center lg:items-start text-center lg:text-left lg:col-span-7"
                 )}
                 style={{ animationDelay: '0.1s' }}
             >
-                <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-black leading-[1.15] mb-4 text-text-primary text-center lg:text-left">
+                <h2
+                    className={clsx(
+                        "font-display text-3xl md:text-4xl lg:text-5xl font-black leading-[1.15] mb-4 text-text-primary",
+                        isChatOpen ? "text-center" : "text-center lg:text-left"
+                    )}
+                >
                     Menguak Jati Diri Lewat <br className="hidden lg:inline" />
                     <span className="text-shimmer">Kebijaksanaan Weton & AI</span>
                 </h2>
 
-                <p className="text-sm md:text-base text-text-secondary max-w-xl mb-6 leading-relaxed text-center lg:text-left mx-auto lg:mx-0">
+                <p
+                    className={clsx(
+                        "text-sm md:text-base text-text-secondary max-w-xl mb-6 leading-relaxed mx-auto",
+                        isChatOpen ? "text-center" : "text-center lg:text-left lg:mx-0"
+                    )}
+                >
                     Pahami vibrasi energi alam semesta saat Anda dilahirkan. Temukan watak asli, arah karir prospektif,
                     dan kompas asmara Anda melalui rumus Primbon klasik yang diperdalam kecerdasan buatan.
                 </p>
 
-                <div className="w-full flex justify-center lg:justify-start">
+                {/* Mobile-only: Mulai Konsultasi button (above calculator) */}
+                {!isChatOpen && (
+                    <button
+                        onClick={calculatorProps.onConsult}
+                        className="lg:hidden w-full flex items-center justify-center gap-2 py-3.5 px-6 mb-4 rounded-2xl bg-gradient-to-r from-accent-gold to-accent-amber text-[#0a0400] font-extrabold text-sm tracking-wider shadow-lg shadow-accent-gold/25 hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+                    >
+                        <Sparkles className="w-4 h-4" />
+                        Mulai Konsultasi AI
+                        <ArrowRight className="w-4 h-4" />
+                    </button>
+                )}
+
+                <div className={clsx("w-full flex", isChatOpen ? "justify-center" : "justify-center lg:justify-start")}>
                     <WetonCalculator {...calculatorProps} />
                 </div>
             </div>
 
             {/* Interactive Wayang & Sacred Geometry Astrolabe */}
+            {!isChatOpen && (
             <div
                 className={clsx(
                     "flex justify-center items-center relative w-full",
-                    isChatOpen
-                        ? "col-span-1 h-[320px] mt-6"
-                        : "lg:col-span-5 h-[380px] lg:h-[480px]"
+                    "lg:col-span-5 h-[380px] lg:h-[480px]"
                 )}
             >
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -134,6 +158,7 @@ export function HeroSection(props: HeroSectionProps) {
                     </div>
                 </div>
             </div>
+            )}
         </main>
     );
 }
