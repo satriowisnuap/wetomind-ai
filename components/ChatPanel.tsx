@@ -103,7 +103,10 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
   const [currentWeton,     setCurrentWeton]     = useState<WetonData | null>(null);
   const [inputText,        setInputText]        = useState('');
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef  = useRef<HTMLDivElement>(null);
+  // Ref-level guard: prevents two concurrent handleSend calls even when React
+  // state updates (isLoading/isStreaming) have not yet re-rendered.
+  const isSendingRef = useRef(false);
 
   // ── Hydrate from sessionStorage on client mount ─────────────────
   const hydrated = useRef(false);
@@ -229,6 +232,8 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
   // ── Send message ─────────────────────────────────────────────────
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
+    // Synchronous ref guard — blocks concurrent calls before any state update
+    if (isSendingRef.current) return;
     if (!userName || !userBirthdate) {
       setMessages(prev => [...prev, { role: 'error', text: 'Mohon isi nama dan tanggal lahir Anda terlebih dahulu di form bagian atas.' }]);
       return;
@@ -237,6 +242,13 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
       setMessages(prev => [...prev, { role: 'error', text: 'Mohon isi nama pasangan/rekan untuk fitur ini.' }]);
       return;
     }
+
+    isSendingRef.current = true;
+
+    // Capture the stable index for the model message we are about to create.
+    // Using messages.length: +0 = user msg, +1 = model msg (appended after fetch).
+    // This prevents two concurrent streams from targeting each other's slots.
+    const modelMsgIdx = messages.length + 1;
 
     setMessages(prev => [...prev, { role: 'user', text }]);
     setInputText('');
@@ -254,6 +266,7 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
           partnerName:     needsSecondPerson ? partnerName     : undefined,
           birthdatePartner:needsSecondPerson ? partnerBirthdate: undefined,
           userMessage:     text,
+          history:         messages.filter(m => m.role === 'user' || m.role === 'model'),
         }),
       });
 
@@ -265,7 +278,7 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
       setIsLoading(false);
       setIsStreaming(true);
 
-      // Append empty model message; will be filled by streaming chunks
+      // Append empty model message at the captured index
       setMessages(prev => [...prev, { role: 'model', text: '' }]);
 
       const reader  = response.body?.getReader();
@@ -280,9 +293,10 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
             const chunk = decoder.decode(value, { stream: true });
             setMessages(prev => {
               const updated = [...prev];
-              const lastMsg = updated[updated.length - 1];
-              if (lastMsg && lastMsg.role === 'model') {
-                lastMsg.text += chunk;
+              const target  = updated[modelMsgIdx];
+              // Only update the specific model message slot we own
+              if (target && target.role === 'model') {
+                updated[modelMsgIdx] = { ...target, text: target.text + chunk };
               }
               return updated;
             });
@@ -291,9 +305,10 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
       }
     } catch (error: any) {
       setIsLoading(false);
-      setMessages(prev => [...prev, { role: 'error', text: error.message || 'Terjadi kesalahan sistem.' }]);
+      setMessages(prev => [...prev, { role: 'error', text: (error as any).message || 'Terjadi kesalahan sistem.' }]);
     } finally {
       setIsStreaming(false);
+      isSendingRef.current = false;
     }
   };
 
@@ -485,7 +500,8 @@ export function ChatPanel({ onClose, initialUserName = '', initialUserBirthdate 
                   <button
                     key={i}
                     onClick={() => handleSend(prompt)}
-                    className="px-4 py-3 rounded-xl border border-[#c9a227]/20 bg-white/30 dark:bg-white/5 hover:bg-[#c9a227]/10 dark:hover:bg-white/10 text-[#3d1f00] dark:text-[#f5e6c8] text-sm text-center transition-all"
+                    disabled={isLoading || isStreaming}
+                    className="px-4 py-3 rounded-xl border border-[#c9a227]/20 bg-white/30 dark:bg-white/5 hover:bg-[#c9a227]/10 dark:hover:bg-white/10 text-[#3d1f00] dark:text-[#f5e6c8] text-sm text-center transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     &ldquo;{prompt}&rdquo;
                   </button>

@@ -1,6 +1,6 @@
 export async function callGeminiStream(
   systemInstruction: string,
-  contextPayload: any,
+  contents: any[],
   apiKey: string
 ): Promise<Response> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
@@ -9,17 +9,15 @@ export async function callGeminiStream(
     systemInstruction: {
       parts: [{ text: systemInstruction }],
     },
-    contents: [
-      {
-        role: 'user',
-        parts: [{ text: JSON.stringify(contextPayload) }],
-      },
-    ],
+    contents: contents,
     generationConfig: {
-      temperature: 0.8,
+      temperature: 0.7,
       topK: 40,
       topP: 0.95,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 8192,
+      thinkingConfig: {
+        thinkingBudget: 0,
+      },
     },
   };
 

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     const body: ChatRequestPayload = await req.json();
 
-    const { feature, birthdate, birthdatePartner, userName, partnerName, userMessage } = body;
+    const { feature, birthdate, birthdatePartner, userName, partnerName, userMessage, history } = body;
 
     // Validate inputs
     if (!userName || !birthdate) {
@@ -44,11 +44,13 @@ export async function POST(req: NextRequest) {
       paduanJodoh = getPaduanJodoh(weton.totalNeptu, wetonPartner.totalNeptu);
     }
 
+    const firstUserMsgText = history && history.length > 0 ? history[0].text : userMessage;
+
     const contextPayload: any = {
       feature,
       weton,
       namaUser: userName,
-      pertanyaanUser: userMessage,
+      pertanyaanUser: firstUserMsgText,
     };
 
     if (partnerName) contextPayload.namaPasangan = partnerName;
@@ -56,7 +58,39 @@ export async function POST(req: NextRequest) {
     if (paduanJodoh) contextPayload.paduanJodoh = paduanJodoh;
     if (catatanPasangan) contextPayload.catatanPasangan = catatanPasangan;
 
-    const geminiResponse = await callGeminiStream(SYSTEM_PROMPT, contextPayload, apiKey);
+    // Build the contents array for Gemini
+    const contents: any[] = [];
+
+    if (history && history.length > 0) {
+      // First message is user, we wrap it in contextPayload JSON
+      contents.push({
+        role: 'user',
+        parts: [{ text: JSON.stringify(contextPayload) }],
+      });
+
+      // Add remaining history
+      for (let i = 1; i < history.length; i++) {
+        const msg = history[i];
+        contents.push({
+          role: msg.role === 'model' ? 'model' : 'user',
+          parts: [{ text: msg.text }],
+        });
+      }
+
+      // Add current message as final user turn
+      contents.push({
+        role: 'user',
+        parts: [{ text: userMessage }],
+      });
+    } else {
+      // No history, just the single current user message
+      contents.push({
+        role: 'user',
+        parts: [{ text: JSON.stringify(contextPayload) }],
+      });
+    }
+
+    const geminiResponse = await callGeminiStream(SYSTEM_PROMPT, contents, apiKey);
 
     if (!geminiResponse.body) {
       throw new Error('No body in Gemini response');
@@ -73,30 +107,57 @@ export async function POST(req: NextRequest) {
           return;
         }
 
+        let buffer = '';
+        let streamDone = false;
+
+        // Helper: extract incremental text from a parsed Gemini SSE chunk.
+        // Rules:
+        //  1. Do not skip candidates with finishReason. Incremental streams may contain
+        //     final content in the same chunk as the finishReason.
+        //  2. Skip parts that are thinking tokens (thought: true).
+        function extractText(data: any): string {
+          const candidate = data?.candidates?.[0];
+          const parts: any[] = candidate?.content?.parts ?? [];
+          // Find the first non-thinking text part
+          const textPart = parts.find((p: any) => !p.thought && typeof p.text === 'string');
+          return textPart?.text ?? '';
+        }
+
         try {
-          while (true) {
+          while (!streamDone) {
             const { done, value } = await reader.read();
-            if (done) break;
-
-            const text = decoder.decode(value, { stream: true });
-            const lines = text.split('\n').filter((line) => line.trim() !== '');
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const dataStr = line.replace('data: ', '');
-                if (dataStr === '[DONE]') break;
-                try {
-                  const data = JSON.parse(dataStr);
-                  const candidate = data.candidates?.[0];
-                  // Extract chunk text if available
-                  const chunkStr = candidate?.content?.parts?.[0]?.text;
-                  if (chunkStr) {
-                    controller.enqueue(encoder.encode(chunkStr));
-                  }
-                } catch (e) {
-                  // Ignore parse error on partial chunks
+            if (done) {
+              // Process any remaining incomplete line in the buffer
+              if (buffer) {
+                const line = buffer.trim();
+                if (line.startsWith('data: ')) {
+                  const dataStr = line.slice(6); // remove 'data: '
+                  try {
+                    const chunkStr = extractText(JSON.parse(dataStr));
+                    if (chunkStr) controller.enqueue(encoder.encode(chunkStr));
+                  } catch (e) { /* ignore */ }
                 }
               }
+              break;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) continue;
+              if (!trimmed.startsWith('data: ')) continue;
+              const dataStr = trimmed.slice(6); // remove 'data: '
+              if (dataStr === '[DONE]') {
+                streamDone = true; // signal outer while to stop
+                break;
+              }
+              try {
+                const chunkStr = extractText(JSON.parse(dataStr));
+                if (chunkStr) controller.enqueue(encoder.encode(chunkStr));
+              } catch (e) { /* ignore partial chunks */ }
             }
           }
         } catch (e) {

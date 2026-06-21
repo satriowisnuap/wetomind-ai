@@ -26,4 +26,5 @@ export interface ChatRequestPayload {
   userName: string;
   partnerName?: string;
   userMessage: string;
+  history?: ChatMessage[];
 }
